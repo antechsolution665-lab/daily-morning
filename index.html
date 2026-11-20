@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DAILY MORNING</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -26,11 +27,13 @@ nav a{color:white;text-decoration:none;margin:0 12px;font-weight:bold}
 .price{color:#168447;font-weight:bold;margin:10px}
 button{background:#168447;color:white;border:0;padding:10px 15px;border-radius:7px;cursor:pointer}
 button:hover{background:#106b39}
+button:disabled{opacity:.5;cursor:not-allowed}
 .cart-box,.checkout{background:white;padding:18px;border-radius:12px;margin-top:25px;box-shadow:0 2px 8px #0001}
 .cart-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #ddd}
 .total{font-size:20px;color:#168447;font-weight:bold;margin:15px 0}
 input,textarea{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-radius:7px;font-size:15px}
 footer{background:#106b39;color:white;text-align:center;padding:25px;margin-top:30px}
+#message{margin-top:15px;line-height:1.5;overflow-wrap:anywhere}
 </style>
 </head>
 
@@ -56,6 +59,7 @@ footer{background:#106b39;color:white;text-align:center;padding:25px;margin-top:
 <div class="container">
 
 <h2 class="section-title" id="products">Our Products</h2>
+<div id="loadMessage" style="text-align:center;padding:15px">Loading products...</div>
 <div class="products" id="productList"></div>
 
 <div class="cart-box" id="cart">
@@ -68,13 +72,13 @@ footer{background:#106b39;color:white;text-align:center;padding:25px;margin-top:
 <h2>📦 Delivery Details</h2>
 
 <form id="orderForm">
-<input id="customer" placeholder="Your Full Name" required>
-<input id="phone" type="tel" placeholder="10 Digit Mobile Number" pattern="[6-9][0-9]{9}" required>
-<textarea id="address" placeholder="Complete Delivery Address" required></textarea>
-<button type="submit" style="width:100%">Place Order</button>
+<input id="customer" maxlength="120" placeholder="Your Full Name" required>
+<input id="phone" type="tel" placeholder="10 Digit Mobile Number" pattern="[6-9][0-9]{9}" maxlength="10" required>
+<textarea id="address" maxlength="500" placeholder="Complete Delivery Address" required></textarea>
+<button id="placeOrderBtn" type="submit" style="width:100%">Place Order</button>
 </form>
 
-<p id="message" style="margin-top:15px"></p>
+<p id="message" role="status"></p>
 </div>
 
 </div>
@@ -86,138 +90,222 @@ footer{background:#106b39;color:white;text-align:center;padding:25px;margin-top:
 </footer>
 
 <script>
+const SUPABASE_URL = "https://lmxkuajyifzzgnoxiism.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_E9TvIlV1BEK5KC0_iCvuDg_qpsvv494";
 
-const products = [
-{id:1,name:"Fresh Milk",price:30,image:"https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400"},
-{id:2,name:"Bread",price:40,image:"https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"},
-{id:3,name:"Eggs (6 pcs)",price:45,image:"https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=400"},
-{id:4,name:"Banana",price:40,image:"https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=400"},
-{id:5,name:"Apple",price:120,image:"https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400"},
-{id:6,name:"Potato",price:30,image:"https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400"},
-{id:7,name:"Tomato",price:35,image:"https://images.unsplash.com/photo-1546094096-0df4bcaaa337?w=400"},
-{id:8,name:"Butter",price:60,image:"https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=400"},
-{id:9,name:"Orange",price:80,image:"https://images.unsplash.com/photo-1547514701-42782101795e?w=400"},
-{id:10,name:"Rice (1 kg)",price:65,image:"https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400"}
-];
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
 
+let products = [];
 let cart = [];
 
-function showProducts(){
-document.getElementById("productList").innerHTML =
-products.map(p => `
-<div class="product">
-<img src="${p.image}" alt="${p.name}">
-<h3>${p.name}</h3>
-<div class="price">₹${p.price}</div>
-<button onclick="addToCart(${p.id})">Add to Cart</button>
-</div>
-`).join("");
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  }[c]));
 }
 
-function addToCart(id){
-let item = cart.find(p=>p.id===id);
-
-if(item){
-item.qty++;
-}else{
-let product = products.find(p=>p.id===id);
-cart.push({...product,qty:1});
+function money(value) {
+  return Number(value).toLocaleString("en-IN");
 }
 
-showCart();
+async function loadProducts() {
+  const box = document.getElementById("loadMessage");
+  box.textContent = "Loading products...";
+
+  try {
+    const { data, error } = await db
+      .from("products")
+      .select("id,name,description,price,stock,image_url,is_active")
+      .eq("is_active", true)
+      .order("id", { ascending: true });
+
+    if (error) throw error;
+
+    products = data || [];
+    box.textContent = products.length
+      ? ""
+      : "No products available right now.";
+
+    showProducts();
+
+  } catch (error) {
+    console.error(error);
+    box.textContent = "Products could not be loaded. Please try again later.";
+  }
 }
 
-function changeQty(id,change){
-let item = cart.find(p=>p.id===id);
+function showProducts() {
+  document.getElementById("productList").innerHTML =
+    products.map(p => {
+      const imageUrl = /^https?:\/\//i.test(p.image_url || "")
+        ? escapeHtml(p.image_url)
+        : "";
 
-if(!item)return;
-
-item.qty += change;
-
-if(item.qty<=0){
-cart = cart.filter(p=>p.id!==id);
+      return `
+        <div class="product">
+          ${imageUrl ? `<img src="${imageUrl}" alt="${escapeHtml(p.name)}" onerror="this.style.display='none'">` : ""}
+          <h3>${escapeHtml(p.name)}</h3>
+          <div class="price">₹${money(p.price)}</div>
+          ${p.description ? `<p>${escapeHtml(p.description)}</p>` : ""}
+          <p style="font-size:12px;margin:6px">Stock: ${money(p.stock)}</p>
+          <button onclick="addToCart(${Number(p.id)})" ${Number(p.stock) <= 0 ? "disabled" : ""}>
+            Add to Cart
+          </button>
+        </div>
+      `;
+    }).join("");
 }
 
-showCart();
+function addToCart(id) {
+  const product = products.find(p => Number(p.id) === Number(id));
+  if (!product) return;
+
+  const item = cart.find(p => Number(p.id) === Number(id));
+
+  if (item) {
+    if (item.qty >= Number(product.stock)) {
+      alert("Available stock limit reached.");
+      return;
+    }
+    item.qty++;
+  } else {
+    if (Number(product.stock) < 1) return;
+
+    cart.push({
+      id: product.id,
+      name: product.name,
+      price: Number(product.price),
+      stock: Number(product.stock),
+      qty: 1
+    });
+  }
+
+  showCart();
 }
 
-function showCart(){
+function changeQty(id, change) {
+  const item = cart.find(p => Number(p.id) === Number(id));
+  if (!item) return;
 
-let html="";
-let total=0;
+  const product = products.find(p => Number(p.id) === Number(id));
 
-cart.forEach(p=>{
+  if (change > 0 && item.qty >= Number(product?.stock || 0)) {
+    alert("Available stock limit reached.");
+    return;
+  }
 
-let subtotal=p.price*p.qty;
-total+=subtotal;
+  item.qty += change;
 
-html+=`
-<div class="cart-item">
-<div>
-<strong>${p.name}</strong><br>
-₹${p.price} × ${p.qty}
-</div>
-<div>
-<button onclick="changeQty(${p.id},-1)">−</button>
-<button onclick="changeQty(${p.id},1)">+</button>
-</div>
-</div>
-`;
+  if (item.qty <= 0) {
+    cart = cart.filter(p => Number(p.id) !== Number(id));
+  }
 
+  showCart();
+}
+
+function showCart() {
+  let html = "";
+  let total = 0;
+
+  cart.forEach(p => {
+    total += p.price * p.qty;
+
+    html += `
+      <div class="cart-item">
+        <div>
+          <strong>${escapeHtml(p.name)}</strong><br>
+          ₹${money(p.price)} × ${p.qty}
+        </div>
+        <div>
+          <button type="button" onclick="changeQty(${Number(p.id)},-1)">−</button>
+          <button type="button" onclick="changeQty(${Number(p.id)},1)">+</button>
+        </div>
+      </div>
+    `;
+  });
+
+  document.getElementById("cartItems").innerHTML =
+    html || "Your cart is empty.";
+
+  document.getElementById("total").textContent = money(total);
+
+  document.getElementById("cartCount").textContent =
+    cart.reduce((sum, p) => sum + p.qty, 0);
+}
+
+document.getElementById("orderForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+
+  const message = document.getElementById("message");
+  const button = document.getElementById("placeOrderBtn");
+
+  if (cart.length === 0) {
+    message.textContent = "Please add products to cart first.";
+    return;
+  }
+
+  const customer = document.getElementById("customer").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const address = document.getElementById("address").value.trim();
+
+  if (!/^[6-9][0-9]{9}$/.test(phone)) {
+    message.textContent = "Please enter a valid 10-digit mobile number.";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Placing Order...";
+  message.textContent = "Please wait...";
+
+  try {
+    const items = cart.map(p => ({
+      id: p.id,
+      quantity: p.qty
+    }));
+
+    const { data, error } = await db.rpc("place_order", {
+      p_customer_name: customer,
+      p_phone: phone,
+      p_address: address,
+      p_items: items
+    });
+
+    if (error) throw error;
+
+    if (!data || !data.success) {
+      throw new Error("Order could not be confirmed.");
+    }
+
+    message.textContent =
+      "✅ Order placed successfully! Order ID: " +
+      data.order_id +
+      " | Total: ₹" + money(data.total_amount);
+
+    cart = [];
+    showCart();
+    this.reset();
+
+    await loadProducts();
+
+  } catch (error) {
+    console.error(error);
+    message.textContent =
+      "❌ Order failed: " + (error.message || "Please try again.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Place Order";
+  }
 });
 
-document.getElementById("cartItems").innerHTML =
-html || "Your cart is empty.";
-
-document.getElementById("total").innerText=total;
-
-document.getElementById("cartCount").innerText =
-cart.reduce((sum,p)=>sum+p.qty,0);
-
-}
-
-document.getElementById("orderForm").addEventListener("submit",function(e){
-
-e.preventDefault();
-
-if(cart.length===0){
-alert("Please add products to cart first!");
-return;
-}
-
-const order={
-id:Date.now(),
-customer:document.getElementById("customer").value.trim(),
-phone:document.getElementById("phone").value.trim(),
-address:document.getElementById("address").value.trim(),
-products:cart.map(p=>({
-name:p.name,
-price:p.price,
-quantity:p.qty
-})),
-amount:cart.reduce((sum,p)=>sum+p.price*p.qty,0),
-status:"Pending",
-date:new Date().toLocaleString()
-};
-
-let orders=JSON.parse(localStorage.getItem("dailyMorningOrders")||"[]");
-
-orders.push(order);
-
-localStorage.setItem("dailyMorningOrders",JSON.stringify(orders));
-
-document.getElementById("message").innerHTML=
-"✅ Order placed successfully! Order ID: "+order.id;
-
-cart=[];
 showCart();
-this.reset();
-
-});
-
-showProducts();
-showCart();
-
+loadProducts();
 </script>
 
 </body>
