@@ -1,0 +1,100 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DAILY MORNING - Track Order</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f7f4;font-family:Arial;color:#222}
+header{background:#0d6032;color:white;padding:20px;text-align:center}
+main{max-width:650px;margin:25px auto;padding:15px}
+.card{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px #0001}
+input,button{width:100%;padding:13px;margin-top:12px;border-radius:8px;font-size:16px}
+input{border:1px solid #ccd8ce}
+button{background:#168447;color:white;border:0;font-weight:bold}
+#result{margin-top:20px}
+.status{padding:14px;background:#eaf7ef;border-radius:9px;color:#0d6032;font-weight:bold;font-size:19px}
+.step{padding:12px;border-left:4px solid #ccc;margin:12px 0;background:#f8faf8}
+.step.active{border-color:#168447;background:#eaf7ef}
+.muted{color:#68736b;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+<h2>DAILY MORNING</h2>
+<p>Track Your Order</p>
+</header>
+<main>
+<div class="card">
+<h2>Order Tracking</h2>
+<p>Enter your Order ID to check delivery status.</p>
+
+<form id="trackForm">
+<input id="orderId" placeholder="Enter your Order ID" required>
+<button id="trackBtn">Track My Order</button>
+</form>
+
+<div id="result"></div>
+</div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL="https://lmxkuajyifzzgnoxiism.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_E9TvIlV1BEK5KC0_iCvuDg_qpsvv494";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+
+const states=["Pending","Processing","Shipped","Delivered"];
+
+$("trackForm").onsubmit=async function(e){
+e.preventDefault();
+const id=document.getElementById("orderId").value.trim();
+const result=document.getElementById("result");
+const btn=document.getElementById("trackBtn");
+
+btn.disabled=true;
+btn.textContent="Checking...";
+result.textContent="Searching order...";
+
+const {data,error}=await db
+.from("orders")
+.select("id,status,created_at")
+.eq("id",id)
+.maybeSingle();
+
+btn.disabled=false;
+btn.textContent="Track My Order";
+
+if(error){
+result.textContent="Unable to check order. Please try again.";
+return;
+}
+if(!data){
+result.textContent="Order not found. Please check your Order ID.";
+return;
+}
+
+const current=states.indexOf(data.status);
+const steps=states.map((s,i)=>`
+<div class="step ${current>=0&&i<=current?"active":""}">
+${current>=0&&i<=current?"✓":"○"} ${s}
+</div>`).join("");
+
+result.innerHTML=`
+<h3>Order Found!</h3>
+<div class="status">Current Status: ${esc(data.status)}</div>
+<p><b>Order ID:</b> ${esc(data.id)}</p>
+<p class="muted">Order Date: ${new Date(data.created_at).toLocaleString("en-IN")}</p>
+<h3>Delivery Progress</h3>
+${steps}
+`;
+};
+</script>
+</body>
+</html>
