@@ -1,0 +1,221 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DAILY MORNING - Delivery Dashboard</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f7f4;font-family:Arial,sans-serif;color:#222}
+header{background:#0d6032;color:white;padding:18px}
+main{max-width:850px;margin:auto;padding:16px}
+.card{background:white;padding:16px;border-radius:12px;margin:14px 0;box-shadow:0 2px 8px #0000000c}
+input,button,select{width:100%;padding:12px;margin:7px 0;border:1px solid #ccd8ce;border-radius:8px;font-size:15px}
+button{background:#168447;color:white;border:0;font-weight:bold;cursor:pointer}
+.logout{background:#555}
+.order{border:1px solid #dce8df;border-radius:10px;padding:14px;margin:12px 0}
+.muted{color:#68736b;font-size:13px}
+.status{font-weight:bold;color:#0d6032}
+.hidden{display:none}
+li{margin:7px 0}
+</style>
+</head>
+<body>
+<header>
+<h2>DAILY MORNING</h2>
+<div>Delivery Staff Dashboard</div>
+</header>
+<main>
+
+<section id="loginBox" class="card">
+<h3>Staff Login</h3>
+<form id="loginForm">
+<input id="email" type="email" placeholder="Staff Email" required>
+<input id="password" type="password" placeholder="Password" required>
+<button id="loginBtn">Login</button>
+</form>
+<div id="loginMessage"></div>
+</section>
+
+<section id="dashboard" class="hidden">
+<div class="card">
+<h3 id="welcome">Welcome</h3>
+<button id="refreshBtn">Refresh Orders</button>
+<button id="logoutBtn" class="logout">Logout</button>
+</div>
+<div class="card">
+<h3>My Assigned Orders</h3>
+<div id="orders">Loading orders...</div>
+</div>
+</section>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL="https://lmxkuajyifzzgnoxiism.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_E9TvIlV1BEK5KC0_iCvuDg_qpsvv494";
+
+const db=window.supabase.createClient(
+SUPABASE_URL,
+SUPABASE_ANON_KEY
+);
+
+const $=id=>document.getElementById(id);
+
+function esc(v){
+return String(v??"").replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+}
+
+function showMessage(id,text){
+$(id).textContent=text;
+}
+
+async function checkStaff(){
+const {data:{user}}=await db.auth.getUser();
+
+if(!user){
+$("loginBox").classList.remove("hidden");
+$("dashboard").classList.add("hidden");
+return;
+}
+
+const {data:staff,error}=await db
+.from("delivery_staff")
+.select("user_id,name,is_active")
+.eq("user_id",user.id)
+.maybeSingle();
+
+if(error||!staff||!staff.is_active){
+await db.auth.signOut();
+$("loginBox").classList.remove("hidden");
+$("dashboard").classList.add("hidden");
+showMessage("loginMessage","Staff account is not active or not registered.");
+return;
+}
+
+$("loginBox").classList.add("hidden");
+$("dashboard").classList.remove("hidden");
+$("welcome").textContent="Welcome, "+staff.name;
+
+await loadOrders(user.id);
+}
+
+$("loginForm").onsubmit=async e=>{
+e.preventDefault();
+$("loginBtn").disabled=true;
+
+const {error}=await db.auth.signInWithPassword({
+email:$("email").value.trim(),
+password:$("password").value
+});
+
+$("loginBtn").disabled=false;
+
+if(error){
+showMessage("loginMessage",error.message);
+return;
+}
+
+await checkStaff();
+};
+
+async function loadOrders(userId){
+$("orders").textContent="Loading orders...";
+
+const {data:orders,error}=await db
+.from("orders")
+.select("id,customer_name,phone,address,total_amount,status,created_at")
+.eq("assigned_staff_id",userId)
+.order("created_at",{ascending:false});
+
+if(error){
+$("orders").textContent="Error: "+error.message;
+return;
+}
+
+if(!orders||orders.length===0){
+$("orders").textContent="No orders assigned to you yet.";
+return;
+}
+
+const {data:items,itemError}=await db
+.from("order_items")
+.select("order_id,product_name,price,quantity")
+.in("order_id",orders.map(o=>o.id));
+
+if(itemError){
+$("orders").textContent="Could not load order items: "+itemError.message;
+return;
+}
+
+$("orders").innerHTML=orders.map(o=>{
+const orderItems=(items||[]).filter(i=>i.order_id===o.id);
+const itemHTML=orderItems.map(i=>
+`<li>${esc(i.product_name)} — ${i.quantity} × ₹${Number(i.price).toFixed(2)}</li>`
+).join("");
+
+const states=["Processing","Shipped","Delivered"];
+
+return `
+<div class="order">
+<h3>Order #${esc(o.id.slice(0,8))}</h3>
+<p><b>Customer:</b> ${esc(o.customer_name)}</p>
+<p><b>Phone:</b> <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a></p>
+<p><b>Address:</b> ${esc(o.address)}</p>
+<p><b>Total:</b> ₹${Number(o.total_amount).toFixed(2)}</p>
+<p><b>Current Status:</b> <span class="status">${esc(o.status)}</span></p>
+<p class="muted">${new Date(o.created_at).toLocaleString("en-IN")}</p>
+<b>Products:</b>
+<ul>${itemHTML||"<li>No item details</li>"}</ul>
+<label>Update Status</label>
+<select id="status-${esc(o.id)}">
+${states.map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${s}</option>`).join("")}
+</select>
+<button data-update="${esc(o.id)}">Update Order Status</button>
+</div>`;
+}).join("");
+}
+
+$("orders").onclick=async e=>{
+const orderId=e.target.dataset.update;
+if(!orderId)return;
+
+const status=$("status-"+orderId).value;
+e.target.disabled=true;
+
+const {error}=await db.rpc("update_delivery_status",{
+p_order_id:orderId,
+p_status:status
+});
+
+e.target.disabled=false;
+
+if(error){
+alert("Update failed: "+error.message);
+return;
+}
+
+alert("Order status updated successfully.");
+const {data:{user}}=await db.auth.getUser();
+if(user)await loadOrders(user.id);
+};
+
+$("refreshBtn").onclick=async()=>{
+const {data:{user}}=await db.auth.getUser();
+if(user)await loadOrders(user.id);
+};
+
+$("logoutBtn").onclick=async()=>{
+await db.auth.signOut();
+$("dashboard").classList.add("hidden");
+$("loginBox").classList.remove("hidden");
+};
+
+checkStaff();
+</script>
+</body>
+</html>
