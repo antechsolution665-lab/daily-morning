@@ -1,99 +1,345 @@
+
+
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#168447"><title>DAILY MORNING Admin</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DAILY MORNING Admin</title>
 <style>
-:root{--g:#168447;--d:#0d6032;--bg:#f4f8f5;--line:#e0e9e2}*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:#202820;font-family:Arial,sans-serif}
-header{background:var(--d);color:white;padding:17px}header div,main{max-width:1050px;margin:auto}
-main{padding:22px 15px}.panel{background:white;border:1px solid var(--line);border-radius:12px;padding:17px;margin-bottom:16px}
-h1{font-size:21px;margin:0}h2{font-size:19px;margin:0 0 14px}.muted{color:#68736b;font-size:13px}
-label{display:block;font-size:13px;font-weight:bold;margin:10px 0}
-input,textarea,select{width:100%;padding:11px;border:1px solid #d5e0d7;border-radius:8px;margin-top:5px;font:inherit}
-textarea{min-height:70px}button{border:0;border-radius:8px;padding:10px 14px;background:var(--g);color:white;font-weight:bold;cursor:pointer}
-button.alt{background:#edf5ef;color:var(--d)}button.danger{background:#b42318}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}
-.tabs,.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-.hidden{display:none!important}.notice{padding:10px;border-radius:8px;background:#eaf7ef;color:var(--d);font-size:13px;margin-top:12px}.error{background:#fff0ef;color:#9b1c14}
-.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:620px;font-size:13px}td,th{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f7faf7}
+*{box-sizing:border-box}
+body{margin:0;background:#f4f8f5;color:#202820;font-family:Arial}
+header{background:#0d6032;color:white;padding:18px}
+main{max-width:1100px;margin:auto;padding:18px}
+.panel{background:white;border:1px solid #e0e9e2;border-radius:12px;padding:16px;margin-bottom:16px}
+h1{font-size:21px;margin:0}h2{font-size:19px}
+label{display:block;font-weight:bold;font-size:13px;margin:10px 0}
+input,textarea,select{width:100%;padding:11px;border:1px solid #ccd8ce;border-radius:8px;margin-top:5px;font:inherit}
+textarea{min-height:65px}
+button{padding:10px 14px;border:0;border-radius:8px;background:#168447;color:white;font-weight:bold;cursor:pointer;margin:3px}
+.alt{background:#edf5ef;color:#0d6032}.danger{background:#b42318}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.full{grid-column:1/-1}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.hidden{display:none!important}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:650px;font-size:13px}
+td,th{padding:10px;border-bottom:1px solid #e0e9e2;text-align:left;vertical-align:top}
+th{background:#f7faf7}
+.notice{padding:10px;background:#eaf7ef;color:#0d6032;border-radius:8px;margin-top:10px}
+.error{background:#fff0ef;color:#9b1c14}
+.muted{font-size:13px;color:#68736b}
 @media(max-width:600px){.grid{grid-template-columns:1fr}.full{grid-column:auto}}
-</style></head>
+</style>
+</head>
 <body>
-<header><div><h1>DAILY MORNING — Admin Panel</h1><small>Products, stock and customer orders</small></div></header>
+<header><h1>DAILY MORNING — Admin Panel</h1></header>
 <main>
-<div id="config" class="notice error">Setup required: add your Supabase Project URL and publishable/anon key in the code before using this page.</div>
-<section id="login" class="panel"><h2>Admin Login</h2><p class="muted">Use the admin email and password created in Supabase Authentication.</p>
-<form id="loginForm"><label>Email<input id="email" type="email" required autocomplete="username"></label><label>Password<input id="password" type="password" required autocomplete="current-password"></label><button id="loginBtn">Log in</button><div id="loginMsg" class="notice hidden"></div></form></section>
-<section id="app" class="hidden">
-<div class="panel"><div class="actions"><button id="productsTab">Products</button><button id="ordersTab" class="alt">Orders</button><button id="logout" class="alt">Log out</button></div></div>
-<section id="productsView">
-<div class="panel"><h2 id="formTitle">Add Product</h2><form id="productForm"><input id="pid" type="hidden"><div class="grid">
-<label>Product name<input id="pname" required maxlength="120"></label><label>Price (₹)<input id="price" type="number" min="0" step=".01" required></label>
-<label>Stock quantity<input id="stock" type="number" min="0" step="1" value="0" required></label><label>Image URL<input id="image" type="url" placeholder="https://..."></label>
-<label class="full">Description<textarea id="description"></textarea></label></div>
-<div class="actions"><button id="saveProduct">Save Product</button><button id="cancelEdit" type="button" class="alt hidden">Cancel</button></div><div id="productMsg" class="notice hidden"></div></form></div>
-<div class="panel"><h2>Product Inventory</h2><button id="refreshProducts" class="alt">Refresh</button><div class="tablewrap"><table><thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="productRows"><tr><td colspan="4">Loading…</td></tr></tbody></table></div></div>
+
+<section id="login" class="panel">
+<h2>Admin Login</h2>
+<form id="loginForm">
+<label>Email<input id="email" type="email" required></label>
+<label>Password<input id="password" type="password" required></label>
+<button id="loginBtn">Log in</button>
+<div id="loginMsg"></div>
+</form>
 </section>
-<section id="ordersView" class="panel hidden"><h2>Customer Orders</h2><button id="refreshOrders" class="alt">Refresh</button><div class="tablewrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Address</th><th>Total</th><th>Status</th><th>Save</th></tr></thead><tbody id="orderRows"></tbody></table></div>
-<p class="muted">Only orders stored in Supabase appear here. The current customer website checkout still needs to be connected to Supabase.</p></section>
-</section></main>
+
+<section id="app" class="hidden">
+<div class="panel">
+<div class="tabs">
+<button id="productsTab">Products</button>
+<button id="ordersTab" class="alt">Orders</button>
+<button id="staffTab" class="alt">Delivery Staff</button>
+<button id="logout" class="alt">Log out</button>
+</div>
+</div>
+
+<section id="productsView">
+<div class="panel">
+<h2 id="formTitle">Add Product</h2>
+<form id="productForm">
+<input id="pid" type="hidden">
+<div class="grid">
+<label>Product name<input id="pname" required></label>
+<label>Price ₹<input id="price" type="number" min="0" step=".01" required></label>
+<label>Stock<input id="stock" type="number" min="0" step="1" value="0" required></label>
+<label>Image URL<input id="image" type="url"></label>
+<label class="full">Description<textarea id="description"></textarea></label>
+</div>
+<button id="saveProduct">Save Product</button>
+<button id="cancelEdit" type="button" class="alt hidden">Cancel</button>
+<div id="productMsg"></div>
+</form>
+</div>
+<div class="panel">
+<h2>Product Inventory</h2>
+<button id="refreshProducts" class="alt">Refresh</button>
+<div class="tablewrap"><table>
+<thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+<tbody id="productRows"></tbody>
+</table></div>
+</div>
+</section>
+
+<section id="ordersView" class="panel hidden">
+<h2>Customer Orders & Delivery Assignment</h2>
+<button id="refreshOrders" class="alt">Refresh Orders</button>
+<div class="tablewrap"><table>
+<thead><tr><th>Order</th><th>Customer</th><th>Address</th><th>Total</th><th>Status</th><th>Delivery Staff</th><th>Save</th></tr></thead>
+<tbody id="orderRows"></tbody>
+</table></div>
+</section>
+
+<section id="staffView" class="hidden">
+<div class="panel">
+<h2>Add Delivery Staff</h2>
+<p class="muted">প্রথমে Supabase Authentication থেকে staff-এর Login account তৈরি করতে হবে। তারপর তার User UID এখানে দিতে হবে।</p>
+<form id="staffForm">
+<label>Staff User UID<input id="staffUid" required placeholder="Supabase Auth User ID"></label>
+<label>Staff Name<input id="staffName" required></label>
+<label>Phone Number<input id="staffPhone"></label>
+<button id="addStaffBtn">Add Delivery Staff</button>
+<div id="staffMsg"></div>
+</form>
+</div>
+<div class="panel">
+<h2>Delivery Staff List</h2>
+<button id="refreshStaff" class="alt">Refresh Staff</button>
+<div class="tablewrap"><table>
+<thead><tr><th>Name</th><th>Phone</th><th>User UID</th><th>Status</th><th>Action</th></tr></thead>
+<tbody id="staffRows"></tbody>
+</table></div>
+</div>
+</section>
+</section>
+</main>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// Paste your Supabase Project URL and publishable/anon key below.
-// NEVER use a service_role or secret key in browser code.
 const SUPABASE_URL="https://lmxkuajyifzzgnoxiism.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_E9TvIlV1BEK5KC0_iCvuDg_qpsvv494";
 const $=id=>document.getElementById(id);
-const ready=SUPABASE_URL.startsWith("https://")&&!SUPABASE_URL.includes("PASTE_")&&SUPABASE_ANON_KEY.length>20&&!SUPABASE_ANON_KEY.includes("PASTE_");
-let db=null,products=[];
-const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const msg=(id,t,bad=false)=>{$(id).textContent=t;$(id).classList.remove("hidden");$(id).classList.toggle("error",bad)};
-const show=logged=>{$("login").classList.toggle("hidden",logged);$("app").classList.toggle("hidden",!logged)};
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let products=[],staff=[];
+
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+
+function message(id,text,bad=false){
+$(id).textContent=text;
+$(id).className=bad?"notice error":"notice";
+}
+function showApp(on){
+$("login").classList.toggle("hidden",on);
+$("app").classList.toggle("hidden",!on);
+}
+function showTab(tab){
+["productsView","ordersView","staffView"].forEach(id=>$(id).classList.add("hidden"));
+$(tab).classList.remove("hidden");
+}
+
 async function checkAdmin(){
- const {data:{session}}=await db.auth.getSession();
- if(!session){show(false);return}
- const {data,error}=await db.rpc("is_admin");
- if(error||data!==true){await db.auth.signOut();show(false);msg("loginMsg","This account is not an authorized admin.",true);return}
- show(true);await loadProducts();
+const {data:{session}}=await db.auth.getSession();
+if(!session){showApp(false);return}
+const {data,error}=await db.rpc("is_admin");
+if(error||data!==true){
+await db.auth.signOut();
+showApp(false);
+message("loginMsg","This account is not an authorized admin.",true);
+return;
 }
-$("loginForm").addEventListener("submit",async e=>{
- e.preventDefault();$("loginBtn").disabled=true;
- const {error}=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
- $("loginBtn").disabled=false;if(error){msg("loginMsg",error.message,true);return}await checkAdmin();
+showApp(true);
+loadProducts();
+}
+
+$("loginForm").onsubmit=async e=>{
+e.preventDefault();
+$("loginBtn").disabled=true;
+const {error}=await db.auth.signInWithPassword({
+email:$("email").value.trim(),
+password:$("password").value
 });
-$("logout").onclick=async()=>{await db.auth.signOut();show(false)};
+$("loginBtn").disabled=false;
+if(error){message("loginMsg",error.message,true);return}
+await checkAdmin();
+};
+$("logout").onclick=async()=>{
+await db.auth.signOut();
+showApp(false);
+};
+
 async function loadProducts(){
- $("productRows").innerHTML="<tr><td colspan='4'>Loading…</td></tr>";
- const {data,error}=await db.from("products").select("id,name,price,stock,image_url,description,is_active").order("id",{ascending:false});
- if(error){$("productRows").innerHTML=`<tr><td colspan="4">${esc(error.message)}</td></tr>`;return}
- products=data||[];if(!products.length){$("productRows").innerHTML="<tr><td colspan='4'>No products yet.</td></tr>";return}
- $("productRows").innerHTML=products.map(p=>`<tr><td><b>${esc(p.name)}</b><br><small>${p.is_active?"Active":"Hidden"}</small></td><td>₹${Number(p.price).toFixed(2)}</td><td>${p.stock}</td><td><button class="alt" data-edit="${p.id}">Edit</button> <button class="danger" data-del="${p.id}">Delete</button></td></tr>`).join("");
+$("productRows").innerHTML="<tr><td colspan='4'>Loading...</td></tr>";
+const {data,error}=await db.from("products")
+.select("id,name,price,stock,image_url,description,is_active")
+.order("id",{ascending:false});
+if(error){$("productRows").innerHTML=`<tr><td colspan="4">${esc(error.message)}</td></tr>`;return}
+products=data||[];
+$("productRows").innerHTML=products.map(p=>`
+<tr>
+<td>${esc(p.name)}<br><small>${p.is_active?"Active":"Hidden"}</small></td>
+<td>₹${Number(p.price).toFixed(2)}</td>
+<td>${p.stock}</td>
+<td>
+<button class="alt" data-edit="${p.id}">Edit</button>
+<button class="danger" data-del="${p.id}">Delete</button>
+</td>
+</tr>`).join("")||"<tr><td colspan='4'>No products.</td></tr>";
 }
-$("productRows").addEventListener("click",async e=>{
- const edit=e.target.dataset.edit,del=e.target.dataset.del;
- if(edit){const p=products.find(x=>String(x.id)===edit);$("pid").value=p.id;$("pname").value=p.name;$("price").value=p.price;$("stock").value=p.stock;$("image").value=p.image_url||"";$("description").value=p.description||"";$("formTitle").textContent="Edit Product";$("saveProduct").textContent="Update Product";$("cancelEdit").classList.remove("hidden");window.scrollTo({top:0,behavior:"smooth"})}
- if(del&&confirm("Delete this product?")){const {error}=await db.from("products").delete().eq("id",del);if(error)msg("productMsg",error.message,true);else{msg("productMsg","Product deleted.");loadProducts()}}
-});
-function resetForm(){$("productForm").reset();$("pid").value="";$("stock").value=0;$("formTitle").textContent="Add Product";$("saveProduct").textContent="Save Product";$("cancelEdit").classList.add("hidden")}
-$("cancelEdit").onclick=resetForm;
-$("productForm").addEventListener("submit",async e=>{
- e.preventDefault();const id=$("pid").value,p={name:$("pname").value.trim(),price:Number($("price").value),stock:Number($("stock").value),image_url:$("image").value.trim(),description:$("description").value.trim(),is_active:true};
- if(!p.name||p.price<0||!Number.isFinite(p.price)||!Number.isInteger(p.stock)||p.stock<0){msg("productMsg","Check product name, price and stock.",true);return}
- $("saveProduct").disabled=true;const result=id?await db.from("products").update(p).eq("id",id):await db.from("products").insert(p);$("saveProduct").disabled=false;
- if(result.error){msg("productMsg",result.error.message,true);return}msg("productMsg",id?"Product updated.":"Product added.");resetForm();loadProducts();
-});
+
+$("productRows").onclick=async e=>{
+const edit=e.target.dataset.edit,del=e.target.dataset.del;
+if(edit){
+const p=products.find(x=>String(x.id)===edit);
+$("pid").value=p.id;$("pname").value=p.name;
+$("price").value=p.price;$("stock").value=p.stock;
+$("image").value=p.image_url||"";
+$("description").value=p.description||"";
+$("formTitle").textContent="Edit Product";
+$("saveProduct").textContent="Update Product";
+$("cancelEdit").classList.remove("hidden");
+window.scrollTo(0,0);
+}
+if(del&&confirm("Delete this product?")){
+const {error}=await db.from("products").delete().eq("id",del);
+if(error)message("productMsg",error.message,true);
+else{message("productMsg","Product deleted.");loadProducts();}
+}
+};
+
+function resetProduct(){
+$("productForm").reset();
+$("pid").value="";
+$("stock").value=0;
+$("formTitle").textContent="Add Product";
+$("saveProduct").textContent="Save Product";
+$("cancelEdit").classList.add("hidden");
+}
+$("cancelEdit").onclick=resetProduct;
+
+$("productForm").onsubmit=async e=>{
+e.preventDefault();
+const id=$("pid").value;
+const p={
+name:$("pname").value.trim(),
+price:Number($("price").value),
+stock:Number($("stock").value),
+image_url:$("image").value.trim(),
+description:$("description").value.trim(),
+is_active:true
+};
+if(!p.name||p.price<0||!Number.isInteger(p.stock)||p.stock<0){
+message("productMsg","Check product details.",true);return;
+}
+$("saveProduct").disabled=true;
+const result=id
+?await db.from("products").update(p).eq("id",id)
+:await db.from("products").insert(p);
+$("saveProduct").disabled=false;
+if(result.error){message("productMsg",result.error.message,true);return}
+message("productMsg",id?"Product updated.":"Product added.");
+resetProduct();loadProducts();
+};
+
+async function loadStaff(){
+$("staffRows").innerHTML="<tr><td colspan='5'>Loading...</td></tr>";
+const {data,error}=await db.from("delivery_staff")
+.select("user_id,name,phone,is_active,created_at")
+.order("created_at",{ascending:false});
+if(error){$("staffRows").innerHTML=`<tr><td colspan="5">${esc(error.message)}</td></tr>`;return}
+staff=data||[];
+$("staffRows").innerHTML=staff.map(s=>`
+<tr>
+<td>${esc(s.name)}</td>
+<td>${esc(s.phone||"-")}</td>
+<td>${esc(s.user_id)}</td>
+<td>${s.is_active?"Active":"Inactive"}</td>
+<td><button class="${s.is_active?"danger":"alt"}" data-toggle="${esc(s.user_id)}" data-active="${s.is_active}">
+${s.is_active?"Deactivate":"Activate"}
+</button></td>
+</tr>`).join("")||"<tr><td colspan='5'>No delivery staff added.</td></tr>";
+}
+
+$("staffForm").onsubmit=async e=>{
+e.preventDefault();
+const row={
+user_id:$("staffUid").value.trim(),
+name:$("staffName").value.trim(),
+phone:$("staffPhone").value.trim(),
+is_active:true
+};
+$("addStaffBtn").disabled=true;
+const {error}=await db.from("delivery_staff").insert(row);
+$("addStaffBtn").disabled=false;
+if(error){message("staffMsg",error.message,true);return}
+message("staffMsg","Delivery staff added successfully.");
+$("staffForm").reset();
+loadStaff();
+};
+
+$("staffRows").onclick=async e=>{
+const id=e.target.dataset.toggle;
+if(!id)return;
+const active=e.target.dataset.active==="true";
+const {error}=await db.from("delivery_staff")
+.update({is_active:!active}).eq("user_id",id);
+if(error){alert(error.message);return}
+loadStaff();
+};
+
 async function loadOrders(){
- $("orderRows").innerHTML="<tr><td colspan='6'>Loading…</td></tr>";
- const {data,error}=await db.from("orders").select("id,customer_name,phone,address,total_amount,status,created_at").order("created_at",{ascending:false});
- if(error){$("orderRows").innerHTML=`<tr><td colspan="6">${esc(error.message)}</td></tr>`;return}
- if(!data?.length){$("orderRows").innerHTML="<tr><td colspan='6'>No database orders yet.</td></tr>";return}
- const states=["Pending","Processing","Shipped","Delivered","Cancelled"];
- $("orderRows").innerHTML=data.map(o=>`<tr><td>${esc(o.id.slice(0,8))}<br><small>${new Date(o.created_at).toLocaleString("en-IN")}</small></td><td>${esc(o.customer_name)}<br>${esc(o.phone)}</td><td>${esc(o.address)}</td><td>₹${Number(o.total_amount).toFixed(2)}</td><td><select data-status="${esc(o.id)}">${states.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select></td><td><button data-save="${esc(o.id)}">Save</button></td></tr>`).join("");
+await loadStaff();
+$("orderRows").innerHTML="<tr><td colspan='7'>Loading...</td></tr>";
+const {data,error}=await db.from("orders")
+.select("id,customer_name,phone,address,total_amount,status,created_at,assigned_staff_id")
+.order("created_at",{ascending:false});
+if(error){$("orderRows").innerHTML=`<tr><td colspan="7">${esc(error.message)}</td></tr>`;return}
+const states=["Pending","Processing","Shipped","Delivered","Cancelled"];
+$("orderRows").innerHTML=(data||[]).map(o=>`
+<tr>
+<td>${esc(o.id.slice(0,8))}<br><small>${new Date(o.created_at).toLocaleString("en-IN")}</small></td>
+<td>${esc(o.customer_name)}<br>${esc(o.phone)}</td>
+<td>${esc(o.address)}</td>
+<td>₹${Number(o.total_amount).toFixed(2)}</td>
+<td><select data-status="${esc(o.id)}">
+${states.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}
+</select></td>
+<td><select data-staff="${esc(o.id)}">
+<option value="">Not assigned</option>
+${staff.filter(s=>s.is_active).map(s=>`
+<option value="${esc(s.user_id)}" ${o.assigned_staff_id===s.user_id?"selected":""}>${esc(s.name)}</option>
+`).join("")}
+</select></td>
+<td><button data-save="${esc(o.id)}">Save</button></td>
+</tr>`).join("")||"<tr><td colspan='7'>No orders yet.</td></tr>";
 }
-$("orderRows").addEventListener("click",async e=>{const id=e.target.dataset.save;if(!id)return;const select=[...$("orderRows").querySelectorAll("select")].find(s=>s.dataset.status===id);const {error}=await db.from("orders").update({status:select.value}).eq("id",id);alert(error?error.message:"Order status updated.")});
-$("productsTab").onclick=()=>{$("productsView").classList.remove("hidden");$("ordersView").classList.add("hidden")};
-$("ordersTab").onclick=()=>{$("productsView").classList.add("hidden");$("ordersView").classList.remove("hidden");loadOrders()};
-$("refreshProducts").onclick=loadProducts;$("refreshOrders").onclick=loadOrders;
-if(ready&&window.supabase){$("config").classList.add("hidden");db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);checkAdmin()}else show(false);
-</script></body></html>
+
+$("orderRows").onclick=async e=>{
+const id=e.target.dataset.save;
+if(!id)return;
+const statusSelect=[...$("orderRows").querySelectorAll("[data-status]")]
+.find(x=>x.dataset.status===id);
+const staffSelect=[...$("orderRows").querySelectorAll("[data-staff]")]
+.find(x=>x.dataset.staff===id);
+const {error}=await db.from("orders").update({
+status:statusSelect.value,
+assigned_staff_id:staffSelect.value||null,
+delivery_method:"daily_morning"
+}).eq("id",id);
+alert(error?error.message:"Order updated successfully.");
+};
+
+$("productsTab").onclick=()=>showTab("productsView");
+$("ordersTab").onclick=()=>{showTab("ordersView");loadOrders()};
+$("staffTab").onclick=()=>{showTab("staffView");loadStaff()};
+$("refreshProducts").onclick=loadProducts;
+$("refreshOrders").onclick=loadOrders;
+$("refreshStaff").onclick=loadStaff;
+
+checkAdmin();
+</script>
+</body>
+</html>
