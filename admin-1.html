@@ -1,5 +1,4 @@
 
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -12,12 +11,14 @@ body{margin:0;background:#f4f8f5;color:#202820;font-family:Arial}
 header{background:#0d6032;color:white;padding:18px}
 main{max-width:1100px;margin:auto;padding:18px}
 .panel{background:white;border:1px solid #e0e9e2;border-radius:12px;padding:16px;margin-bottom:16px}
-h1{font-size:21px;margin:0}h2{font-size:19px}
+h1{font-size:21px;margin:0}
+h2{font-size:19px}
 label{display:block;font-weight:bold;font-size:13px;margin:10px 0}
 input,textarea,select{width:100%;padding:11px;border:1px solid #ccd8ce;border-radius:8px;margin-top:5px;font:inherit}
 textarea{min-height:65px}
 button{padding:10px 14px;border:0;border-radius:8px;background:#168447;color:white;font-weight:bold;cursor:pointer;margin:3px}
-.alt{background:#edf5ef;color:#0d6032}.danger{background:#b42318}
+.alt{background:#edf5ef;color:#0d6032}
+.danger{background:#b42318}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .full{grid-column:1/-1}
 .tabs{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
@@ -29,13 +30,18 @@ th{background:#f7faf7}
 .notice{padding:10px;background:#eaf7ef;color:#0d6032;border-radius:8px;margin-top:10px}
 .error{background:#fff0ef;color:#9b1c14}
 .muted{font-size:13px;color:#68736b}
-@media(max-width:600px){.grid{grid-template-columns:1fr}.full{grid-column:auto}}
+.order-id{display:block;min-width:240px;overflow-wrap:anywhere;font-size:12px}
+@media(max-width:600px){
+.grid{grid-template-columns:1fr}
+.full{grid-column:auto}
+}
 </style>
 </head>
 <body>
-<header><h1>DAILY MORNING — Admin Panel</h1></header>
-<main>
 
+<header><h1>DAILY MORNING — Admin Panel</h1></header>
+
+<main>
 <section id="login" class="panel">
 <h2>Admin Login</h2>
 <form id="loginForm">
@@ -73,23 +79,40 @@ th{background:#f7faf7}
 <div id="productMsg"></div>
 </form>
 </div>
+
 <div class="panel">
 <h2>Product Inventory</h2>
 <button id="refreshProducts" class="alt">Refresh</button>
-<div class="tablewrap"><table>
-<thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+<div class="tablewrap">
+<table>
+<thead>
+<tr><th>Product</th><th>Price</th><th>Stock</th><th>Actions</th></tr>
+</thead>
 <tbody id="productRows"></tbody>
-</table></div>
+</table>
+</div>
 </div>
 </section>
 
 <section id="ordersView" class="panel hidden">
 <h2>Customer Orders & Delivery Assignment</h2>
 <button id="refreshOrders" class="alt">Refresh Orders</button>
-<div class="tablewrap"><table>
-<thead><tr><th>Order</th><th>Customer</th><th>Address</th><th>Total</th><th>Status</th><th>Delivery Staff</th><th>Save</th></tr></thead>
+<div class="tablewrap">
+<table>
+<thead>
+<tr>
+<th>Order</th>
+<th>Customer</th>
+<th>Address</th>
+<th>Total</th>
+<th>Status</th>
+<th>Delivery Staff</th>
+<th>Save</th>
+</tr>
+</thead>
 <tbody id="orderRows"></tbody>
-</table></div>
+</table>
+</div>
 </section>
 
 <section id="staffView" class="hidden">
@@ -104,13 +127,18 @@ th{background:#f7faf7}
 <div id="staffMsg"></div>
 </form>
 </div>
+
 <div class="panel">
 <h2>Delivery Staff List</h2>
 <button id="refreshStaff" class="alt">Refresh Staff</button>
-<div class="tablewrap"><table>
-<thead><tr><th>Name</th><th>Phone</th><th>User UID</th><th>Status</th><th>Action</th></tr></thead>
+<div class="tablewrap">
+<table>
+<thead>
+<tr><th>Name</th><th>Phone</th><th>User UID</th><th>Status</th><th>Action</th></tr>
+</thead>
 <tbody id="staffRows"></tbody>
-</table></div>
+</table>
+</div>
 </div>
 </section>
 </section>
@@ -120,22 +148,30 @@ th{background:#f7faf7}
 <script>
 const SUPABASE_URL="https://lmxkuajyifzzgnoxiism.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_E9TvIlV1BEK5KC0_iCvuDg_qpsvv494";
+
 const $=id=>document.getElementById(id);
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
 let products=[],staff=[];
 
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({
-"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+"&":"&amp;",
+"<":"&lt;",
+">":"&gt;",
+'"':"&quot;",
+"'":"&#39;"
 }[c]));
 
 function message(id,text,bad=false){
 $(id).textContent=text;
 $(id).className=bad?"notice error":"notice";
 }
+
 function showApp(on){
 $("login").classList.toggle("hidden",on);
 $("app").classList.toggle("hidden",!on);
 }
+
 function showTab(tab){
 ["productsView","ordersView","staffView"].forEach(id=>$(id).classList.add("hidden"));
 $(tab).classList.remove("hidden");
@@ -143,70 +179,108 @@ $(tab).classList.remove("hidden");
 
 async function checkAdmin(){
 const {data:{session}}=await db.auth.getSession();
-if(!session){showApp(false);return}
+
+if(!session){
+showApp(false);
+return;
+}
+
 const {data,error}=await db.rpc("is_admin");
+
 if(error||data!==true){
 await db.auth.signOut();
 showApp(false);
 message("loginMsg","This account is not an authorized admin.",true);
 return;
 }
+
 showApp(true);
 loadProducts();
 }
 
 $("loginForm").onsubmit=async e=>{
 e.preventDefault();
+
 $("loginBtn").disabled=true;
+
 const {error}=await db.auth.signInWithPassword({
 email:$("email").value.trim(),
 password:$("password").value
 });
+
 $("loginBtn").disabled=false;
-if(error){message("loginMsg",error.message,true);return}
+
+if(error){
+message("loginMsg",error.message,true);
+return;
+}
+
 await checkAdmin();
 };
+
 $("logout").onclick=async()=>{
 await db.auth.signOut();
 showApp(false);
 };
 
+// PRODUCTS
+
 async function loadProducts(){
 $("productRows").innerHTML="<tr><td colspan='4'>Loading...</td></tr>";
+
 const {data,error}=await db.from("products")
 .select("id,name,price,stock,image_url,description,is_active")
 .order("id",{ascending:false});
-if(error){$("productRows").innerHTML=`<tr><td colspan="4">${esc(error.message)}</td></tr>`;return}
+
+if(error){
+$("productRows").innerHTML=`<tr><td colspan="4">${esc(error.message)}</td></tr>`;
+return;
+}
+
 products=data||[];
+
 $("productRows").innerHTML=products.map(p=>`
 <tr>
 <td>${esc(p.name)}<br><small>${p.is_active?"Active":"Hidden"}</small></td>
 <td>₹${Number(p.price).toFixed(2)}</td>
 <td>${p.stock}</td>
 <td>
-<button class="alt" data-edit="${p.id}">Edit</button>
-<button class="danger" data-del="${p.id}">Delete</button>
+<button class="alt" data-edit="${esc(p.id)}">Edit</button>
+<button class="danger" data-del="${esc(p.id)}">Delete</button>
 </td>
-</tr>`).join("")||"<tr><td colspan='4'>No products.</td></tr>";
+</tr>
+`).join("")||"<tr><td colspan='4'>No products.</td></tr>";
 }
 
 $("productRows").onclick=async e=>{
-const edit=e.target.dataset.edit,del=e.target.dataset.del;
+const edit=e.target.dataset.edit;
+const del=e.target.dataset.del;
+
 if(edit){
 const p=products.find(x=>String(x.id)===edit);
-$("pid").value=p.id;$("pname").value=p.name;
-$("price").value=p.price;$("stock").value=p.stock;
+
+$("pid").value=p.id;
+$("pname").value=p.name;
+$("price").value=p.price;
+$("stock").value=p.stock;
 $("image").value=p.image_url||"";
 $("description").value=p.description||"";
+
 $("formTitle").textContent="Edit Product";
 $("saveProduct").textContent="Update Product";
 $("cancelEdit").classList.remove("hidden");
+
 window.scrollTo(0,0);
 }
+
 if(del&&confirm("Delete this product?")){
 const {error}=await db.from("products").delete().eq("id",del);
+
 if(error)message("productMsg",error.message,true);
-else{message("productMsg","Product deleted.");loadProducts();}
+else{
+message("productMsg","Product deleted.");
+loadProducts();
+}
 }
 };
 
@@ -218,11 +292,14 @@ $("formTitle").textContent="Add Product";
 $("saveProduct").textContent="Save Product";
 $("cancelEdit").classList.add("hidden");
 }
+
 $("cancelEdit").onclick=resetProduct;
 
 $("productForm").onsubmit=async e=>{
 e.preventDefault();
+
 const id=$("pid").value;
+
 const p={
 name:$("pname").value.trim(),
 price:Number($("price").value),
@@ -231,50 +308,84 @@ image_url:$("image").value.trim(),
 description:$("description").value.trim(),
 is_active:true
 };
+
 if(!p.name||p.price<0||!Number.isInteger(p.stock)||p.stock<0){
-message("productMsg","Check product details.",true);return;
+message("productMsg","Check product details.",true);
+return;
 }
+
 $("saveProduct").disabled=true;
+
 const result=id
 ?await db.from("products").update(p).eq("id",id)
 :await db.from("products").insert(p);
+
 $("saveProduct").disabled=false;
-if(result.error){message("productMsg",result.error.message,true);return}
+
+if(result.error){
+message("productMsg",result.error.message,true);
+return;
+}
+
 message("productMsg",id?"Product updated.":"Product added.");
-resetProduct();loadProducts();
+resetProduct();
+loadProducts();
 };
+
+// DELIVERY STAFF
 
 async function loadStaff(){
 $("staffRows").innerHTML="<tr><td colspan='5'>Loading...</td></tr>";
+
 const {data,error}=await db.from("delivery_staff")
 .select("user_id,name,phone,is_active,created_at")
 .order("created_at",{ascending:false});
-if(error){$("staffRows").innerHTML=`<tr><td colspan="5">${esc(error.message)}</td></tr>`;return}
+
+if(error){
+$("staffRows").innerHTML=`<tr><td colspan="5">${esc(error.message)}</td></tr>`;
+return;
+}
+
 staff=data||[];
+
 $("staffRows").innerHTML=staff.map(s=>`
 <tr>
 <td>${esc(s.name)}</td>
 <td>${esc(s.phone||"-")}</td>
 <td>${esc(s.user_id)}</td>
 <td>${s.is_active?"Active":"Inactive"}</td>
-<td><button class="${s.is_active?"danger":"alt"}" data-toggle="${esc(s.user_id)}" data-active="${s.is_active}">
+<td>
+<button class="${s.is_active?"danger":"alt"}"
+data-toggle="${esc(s.user_id)}"
+data-active="${s.is_active}">
 ${s.is_active?"Deactivate":"Activate"}
-</button></td>
-</tr>`).join("")||"<tr><td colspan='5'>No delivery staff added.</td></tr>";
+</button>
+</td>
+</tr>
+`).join("")||"<tr><td colspan='5'>No delivery staff added.</td></tr>";
 }
 
 $("staffForm").onsubmit=async e=>{
 e.preventDefault();
+
 const row={
 user_id:$("staffUid").value.trim(),
 name:$("staffName").value.trim(),
 phone:$("staffPhone").value.trim(),
 is_active:true
 };
+
 $("addStaffBtn").disabled=true;
+
 const {error}=await db.from("delivery_staff").insert(row);
+
 $("addStaffBtn").disabled=false;
-if(error){message("staffMsg",error.message,true);return}
+
+if(error){
+message("staffMsg",error.message,true);
+return;
+}
+
 message("staffMsg","Delivery staff added successfully.");
 $("staffForm").reset();
 loadStaff();
@@ -283,58 +394,131 @@ loadStaff();
 $("staffRows").onclick=async e=>{
 const id=e.target.dataset.toggle;
 if(!id)return;
+
 const active=e.target.dataset.active==="true";
+
 const {error}=await db.from("delivery_staff")
 .update({is_active:!active}).eq("user_id",id);
-if(error){alert(error.message);return}
+
+if(error){
+alert(error.message);
+return;
+}
+
 loadStaff();
 };
 
+// ORDERS
+
 async function loadOrders(){
 await loadStaff();
+
 $("orderRows").innerHTML="<tr><td colspan='7'>Loading...</td></tr>";
+
 const {data,error}=await db.from("orders")
 .select("id,customer_name,phone,address,total_amount,status,created_at,assigned_staff_id")
 .order("created_at",{ascending:false});
-if(error){$("orderRows").innerHTML=`<tr><td colspan="7">${esc(error.message)}</td></tr>`;return}
+
+if(error){
+$("orderRows").innerHTML=`<tr><td colspan="7">${esc(error.message)}</td></tr>`;
+return;
+}
+
 const states=["Pending","Processing","Shipped","Delivered","Cancelled"];
+
 $("orderRows").innerHTML=(data||[]).map(o=>`
 <tr>
-<td>${esc(o.id.slice(0,8))}<br><small>${new Date(o.created_at).toLocaleString("en-IN")}</small></td>
+<td>
+<strong class="order-id">${esc(o.id)}</strong>
+<br>
+<button type="button" class="alt" data-copy="${esc(o.id)}">Copy ID</button>
+<br>
+<small>${new Date(o.created_at).toLocaleString("en-IN")}</small>
+</td>
+
 <td>${esc(o.customer_name)}<br>${esc(o.phone)}</td>
 <td>${esc(o.address)}</td>
 <td>₹${Number(o.total_amount).toFixed(2)}</td>
-<td><select data-status="${esc(o.id)}">
+
+<td>
+<select data-status="${esc(o.id)}">
 ${states.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}
-</select></td>
-<td><select data-staff="${esc(o.id)}">
+</select>
+</td>
+
+<td>
+<select data-staff="${esc(o.id)}">
 <option value="">Not assigned</option>
 ${staff.filter(s=>s.is_active).map(s=>`
 <option value="${esc(s.user_id)}" ${o.assigned_staff_id===s.user_id?"selected":""}>${esc(s.name)}</option>
 `).join("")}
-</select></td>
+</select>
+</td>
+
 <td><button data-save="${esc(o.id)}">Save</button></td>
-</tr>`).join("")||"<tr><td colspan='7'>No orders yet.</td></tr>";
+</tr>
+`).join("")||"<tr><td colspan='7'>No orders yet.</td></tr>";
 }
 
+// COPY ID AND SAVE ORDER
+
 $("orderRows").onclick=async e=>{
+
+const copyId=e.target.dataset.copy;
+
+if(copyId){
+try{
+await navigator.clipboard.writeText(copyId);
+alert("Order ID copied successfully!");
+}catch(err){
+prompt("Copy this Order ID:",copyId);
+}
+return;
+}
+
 const id=e.target.dataset.save;
 if(!id)return;
+
 const statusSelect=[...$("orderRows").querySelectorAll("[data-status]")]
 .find(x=>x.dataset.status===id);
+
 const staffSelect=[...$("orderRows").querySelectorAll("[data-staff]")]
 .find(x=>x.dataset.staff===id);
+
+if(!statusSelect||!staffSelect){
+alert("Order information not found.");
+return;
+}
+
 const {error}=await db.from("orders").update({
 status:statusSelect.value,
 assigned_staff_id:staffSelect.value||null,
 delivery_method:"daily_morning"
 }).eq("id",id);
-alert(error?error.message:"Order updated successfully.");
+
+if(error){
+alert(error.message);
+return;
+}
+
+alert("Order updated successfully!");
+loadOrders();
 };
 
+// TABS AND REFRESH
+
 $("productsTab").onclick=()=>showTab("productsView");
-$("ordersTab").onclick=()=>{showTab("ordersView");loadOrders()};
-$("staffTab").onclick=()=>{showTab("staffView");loadStaff()};
+
+$("ordersTab").onclick=()=>{
+showTab("ordersView");
+loadOrders();
+};
+
+$("staffTab").onclick=()=>{
+showTab("staffView");
+loadStaff();
+};
+
 $("refreshProducts").onclick=loadProducts;
 $("refreshOrders").onclick=loadOrders;
 $("refreshStaff").onclick=loadStaff;
